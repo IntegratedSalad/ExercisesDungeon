@@ -4,7 +4,7 @@ import os
 
 XP_FILE = "data/progress.json"
 
-class Gamification:
+class DungeonSim:
     def __init__(self):
         self.load_progress()
 
