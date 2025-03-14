@@ -36,12 +36,13 @@ class ExerciseApp:
         self.calendar_tab = ttk.Frame(self.notebook)
         self.overview_tab = ttk.Frame(self.notebook)
         self.dungeonsim_tab = ttk.Frame(self.notebook)
+        self.settings_tab = ttk.Frame(self.notebook)
 
         self.notebook.add(self.exercise_tab, text="Add Exercise")
         self.notebook.add(self.calendar_tab, text="Calendar")
         self.notebook.add(self.overview_tab, text="Overview")
         self.notebook.add(self.dungeonsim_tab, text="Dungeon")
-        self.notebook.add(self.dungeonsim_tab, text="Settings")
+        self.notebook.add(self.settings_tab, text="Settings")
 
         self.setup_exercise_tab()
         self.setup_calendar_tab()
@@ -143,6 +144,8 @@ class ExerciseApp:
         self.reps_entry.pack()
         self.commit_exercise_button = tk.Button(frame_middle, text="Commit Exercise", command=self.commit_exercise)
         self.commit_exercise_button.pack()
+        self.uncommit_exercise_button = tk.Button(frame_middle, text="Uncommit Exercise", command=self.uncommit_exercise)
+        self.uncommit_exercise_button.pack()
         self.commit_day_button = tk.Button(frame_middle, text="Commit Day", command=self.commit_day)
         self.commit_day_button.pack()
         self.commit_day_button.config(state=tk.DISABLED)
@@ -235,6 +238,14 @@ class ExerciseApp:
 
         else:
             messagebox.showerror("Input Error", "Please enter a valid number of reps.")
+
+    def uncommit_exercise(self):
+        # find it by sheet id
+        e = self.completed_exercises_listbox.selection_get()
+        for idx, ce in enumerate(self.commited_exercises):
+            if int(e[:2].strip(':')) == int(ce['sheet_id']):
+                self.commited_exercises.remove(ce)
+                self.completed_exercises_listbox.delete(idx, idx)
 
     def commit_day(self):
         for cex in self.commited_exercises:
