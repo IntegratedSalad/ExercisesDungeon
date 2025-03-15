@@ -7,6 +7,7 @@ from tkcalendar import Calendar
 
 DATA_FILE = "data/exercises.json"
 HISTORY_FILE = "data/history.json"
+INVENTORY_FILE = "data/inventory.json"
 
 class ExerciseApp:
     def __init__(self, root):
@@ -18,6 +19,8 @@ class ExerciseApp:
         self.history = {}  # Store exercise history
         self.commited_exercises = []
         self.current_date = datetime.today().date()
+
+        self.inventory = {}
 
         self.load_exercises()
         self.load_history()
@@ -104,12 +107,15 @@ class ExerciseApp:
 
     def update_date(self, _):
         self.current_date = self.calendar.get_date()
+        self.commit_day_button.config(state=tk.NORMAL)
+        self.commit_exercise_button.config(state=tk.NORMAL)
+
+        if (len(self.commited_exercises) <= 0):
+            self.commit_day_button.config(state=tk.DISABLED)
+
         if (datetime.fromisoformat(self.current_date) > datetime.today()):
             self.commit_day_button.config(state=tk.DISABLED)
             self.commit_exercise_button.config(state=tk.DISABLED)
-        else:
-            self.commit_day_button.config(state=tk.NORMAL)
-            self.commit_exercise_button.config(state=tk.NORMAL)
 
     def setup_calendar_tab(self):
         frame_top = tk.Frame(self.calendar_tab)
@@ -190,10 +196,6 @@ class ExerciseApp:
         # Add the exercise entry
         self.history[date].append(exercise)
 
-        # Save back to file
-        # with open(HISTORY_FILE, "w") as file:
-        #     json.dump(history, file, indent=4)
-
     def remove_exercise(self):
         exercise_selected = self.exercise_listbox.selection_get()
         print(exercise_selected)
@@ -227,7 +229,6 @@ class ExerciseApp:
             entry_in_list["repsdone"] = reps
             entry_in_list["date"] = selected_date
             self.commited_exercises.append(entry_in_list)
-            # self.add_exercise_to_history(selected_date, entry_in_list)
             
             if entry_in_list['difficulty'] == "Easy":
                 self.completed_exercises_listbox.itemconfig(tk.END, {'bg': '#90ee90', 'fg': 'black'})
@@ -254,6 +255,93 @@ class ExerciseApp:
         self.save_history()
         self.commited_exercises = []
         self.completed_exercises_listbox.delete(0, tk.END)
+
+    def setup_dungeonsim_tab(self):
+        frame_left = tk.Frame(self.dungeonsim_tab)
+        frame_left.pack(side=tk.LEFT, padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        frame_right = tk.Frame(self.dungeonsim_tab)
+        frame_right.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.Y)
+
+        # Player Info
+        tk.Label(frame_right, text="Character").pack()
+        
+        # Paper Doll Equipment Slots
+        self.equipment_slots = {
+            "Ring": tk.StringVar(value="o"),
+            "Armor": tk.StringVar(value="[ ]"),
+            "Weapon": tk.StringVar(value="I"),
+            "Boots": tk.StringVar(value="/ \\")
+        }
+        
+        for slot, var in self.equipment_slots.items():
+            frame = tk.Frame(frame_right)
+            frame.pack()
+            tk.Label(frame, text=f"{slot}: ").pack(side=tk.LEFT)
+            ttk.Combobox(frame, textvariable=var, values=self.get_inventory_items(slot)).pack(side=tk.LEFT)
+        
+        self.name_label = tk.Label(frame_right, text="Name: Hero")
+        self.name_label.pack()
+        
+        self.hp_var = tk.IntVar(value=100)
+        self.mana_var = tk.IntVar(value=50)
+        
+        tk.Label(frame_right, text="HP:").pack()
+        self.hp_bar = ttk.Progressbar(frame_right, orient="horizontal", length=150, mode="determinate", variable=self.hp_var, maximum=100)
+        self.hp_bar.pack()
+
+        tk.Label(frame_right, text="Mana:").pack()
+        self.mana_bar = ttk.Progressbar(frame_right, orient="horizontal", length=150, mode="determinate", variable=self.mana_var, maximum=50)
+        self.mana_bar.pack()
+
+        self.exp_label = tk.Label(frame_right, text="XP: 0 / 100")
+        self.exp_label.pack()
+        self.level_label = tk.Label(frame_right, text="Level: 1")
+        self.level_label.pack()
+        self.armor_label = tk.Label(frame_right, text="Armor: 10")
+        self.armor_label.pack()
+        self.class_label = tk.Label(frame_right, text="Class: Warrior")
+        self.class_label.pack()
+
+        # Monster Info
+        tk.Label(frame_left, text="Monster").pack()
+        self.monster_name = tk.Label(frame_left, text="Slime")
+        self.monster_name.pack()
+        
+        self.monster_hp_var = tk.IntVar(value=100)
+        self.monster_mana_var = tk.IntVar(value=30)
+        
+        tk.Label(frame_left, text="HP:").pack()
+        self.monster_hp_bar = ttk.Progressbar(frame_left, orient="horizontal", length=150, mode="determinate", variable=self.monster_hp_var, maximum=100)
+        self.monster_hp_bar.pack()
+
+        tk.Label(frame_left, text="Mana:").pack()
+        self.monster_mana_bar = ttk.Progressbar(frame_left, orient="horizontal", length=150, mode="determinate", variable=self.monster_mana_var, maximum=30)
+        self.monster_mana_bar.pack()
+        
+        self.monster_def_label = tk.Label(frame_left, text="Defense: 5")
+        self.monster_def_label.pack()
+        self.monster_level_label = tk.Label(frame_left, text="Level: 1")
+        self.monster_level_label.pack()
+        
+        self.battle_log = tk.Text(frame_left, height=10, width=40, state=tk.DISABLED)
+        self.battle_log.pack(fill=tk.BOTH, expand=True)
+        
+        self.execute_turn_button = tk.Button(frame_left, text="Execute Turn", command=self.execute_turn)
+        self.execute_turn_button.pack()
+
+    def get_inventory_items(self, slot):
+        return self.inventory.get(slot, [self.equipment_slots[slot].get()])
+
+    def load_inventory(self):
+        if os.path.exists(INVENTORY_FILE):
+            with open(INVENTORY_FILE, "r") as file:
+                self.inventory = json.load(file)
+        else:
+            self.inventory = {"Ring": ["o"], "Armor": ["[ ]"], "Weapon": ["I"], "Boots": ["/ \\"]}
+
+    def execute_turn(self):
+        self.battle_log.insert(tk.END, "You attack the monster!\n")
 
     def save_exercises(self): # save available exercises after addition
         os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)

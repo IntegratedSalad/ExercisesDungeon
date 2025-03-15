@@ -8,6 +8,10 @@ class DungeonSim:
     def __init__(self):
         self.load_progress()
 
+
+
+    
+
     def load_progress(self):
         if not os.path.exists(XP_FILE):
             self.progress = {"xp": 0, "level": 1, "streak": 0}
